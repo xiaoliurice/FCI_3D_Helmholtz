@@ -1,29 +1,27 @@
-function u = fcipre(f,N,kh,kh0,ab, shf,wts)
+function u = fcipre(f,MAT,FCI)
 % Contour integration preconditioner
-% shf vector of complex shifts
-% wts vector of quadrature weights
 
-restart = 20;
-maxit   = 3;
-tol = 1e-2;
-
-tic;
 % outer problem
 u = zeros(size(f));
-for p = 1:length(shf)
-   z = 1 + shf(p);
+
+tic;
+for p = 1:FCI.np
+   MAT.z = 1 + FCI.shf(p);
    % matrix-free solution of shifted problems
-   [v,~,relres,iter] = gmres(@(x)helmop(x,N,z,kh,ab),f,restart,tol,maxit,@(x)helmpre(x,N,z,kh0));
-   fprintf('%dth pole: relative residual %.2e, iterations %d.\n',p,relres,(iter(1)-1)*restart + iter(2));
-   u = u + wts(p)*v;
+   [v,~,rres,iter] = gmres(@(x)helmop(x,MAT),f,FCI.im,FCI.tol,FCI.nim,@(x)helmpre(x,MAT));
+   fprintf('|%d,%.2e',(iter(1)-1)*FCI.im + iter(2),rres);
+   u = u + FCI.wts(p)*v;
 end
+fprintf('|\n');
 
 % inner problem unpreconditioned GMRES on current residual
-v = f-helmop(u,N,1,kh,ab);
+v = f-helmop(u,MAT);
 nrm = norm(v);
-[v,~,relres] = gmres(@(x)helmop(x,N,1,kh,ab),v,restart,tol,maxit);
+MAT.z = 1;
+[v,~,rres] = gmres(@(x)helmop(x,MAT),v,FCI.im,FCI.tol,FCI.nim);
 u = u + v;
-
 toc;
-fprintf('res %.2e, inner relres %.2e\n', nrm*relres,relres); % report current residual
+
+% report current residual
+fprintf('\n res %.2e, inner rres %.2e\n', nrm*rres,rres); 
 end
