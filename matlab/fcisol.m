@@ -8,14 +8,15 @@ pfci=tic;
 u = zeros(size(f));
 nmv = 0;
 for p = 1:FCI.np
-   MAT.z = 1 + FCI.shf(p);
+   MAT.zf = 1 + FCI.shf(p); % shift of forward operator
+   MAT.zs = MAT.zf;         % shift for the solution operator
    % matrix-free solution of shifted problems
    [v,~,rres,iter] = gmres(@(x)helmop(x,MAT),f,FCI.im,FCI.tol,FCI.nim,@(x)helmpre(x,MAT));
    fprintf('|%d,%.1e',(iter(1)-1)*FCI.im + iter(2),rres);
    nmv = nmv + 2*((iter(1)-1)*FCI.im + iter(2));
    u = u + FCI.wts(p)*v;
 end
-MAT.z = 1;
+MAT.zf = 1;
 v = helmop(u,MAT);
 c = real(v'*f) / (v'*v); % step size
 u = c*u;
@@ -24,7 +25,8 @@ fprintf('|%.2f',c);
 
 % inner problem
 % GMRES on current residual
-[v,~,~,iter] = gmres(@(x)helmop(x,MAT),v,FCI.im,FCI.tol,FCI.nim);
+MAT.zs = 1 + FCI.shf(1);
+[v,~,~,iter] = gmres(@(x)helmop(x,MAT),v,FCI.im,FCI.tol,FCI.nim,@(x)helmpre(x,MAT));
 u = u + v;
 nmv = nmv + (iter(1)-1)*FCI.im + iter(2) + 1;
 
