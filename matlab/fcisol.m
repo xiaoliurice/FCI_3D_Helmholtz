@@ -17,7 +17,7 @@ for p = 1:FCI.np
 end
 MAT.z = 1;
 v = helmop(u,MAT);
-c = v'*f / (v'*v); % step size
+c = real(v'*f) / (v'*v); % step size
 u = c*u;
 v = f-c*v; % new residual
 fprintf('|%.2f',c);
