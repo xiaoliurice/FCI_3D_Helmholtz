@@ -4,7 +4,7 @@ function [y] = helmop(x,MAT)
 % Laplacian via DST (implying zero boundary)
 % z complex coefficient (1+shift)
 % kh variable-coefficient dimensionless wavenumber  2pi/ppw in [0 -- pi (Nyquist rate)]
-% ab variable-coefficient absorption in the form of 1j*kh^2*const
+% ab variable-coefficient absorption
     N = MAT.N;
     y = dst1fft(reshape(x, N));
     xi = kron(ones(1,N(2)*N(3)),(pi/(N(1)+1) * (1:N(1))).^2) ...
