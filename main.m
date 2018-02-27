@@ -29,7 +29,7 @@ for rnd = 1
     MAT.ab(:) = max( MAT.ab(:), kron( ones(N(3),1), kron(l2, ones(N(1),1)) ) );
     
     % wavenumber
-    MAT.kh0 = 2*pi/2.25;      % 2pi/number of points per wavelength
+    MAT.kh0 = 2*pi/5.25;      % 2pi/number of points per wavelength
     MAT.kh  = ones(N)*MAT.kh0;
 %    MAT.kh(ceil(N(1)/3):ceil(N(1)*2/3),ceil(N(2)/3):ceil(N(2)*2/3),ceil(N(3)/3):ceil(N(3)*2/3)) = MAT.kh0/2;
     
@@ -41,13 +41,13 @@ for rnd = 1
     nrm0 = norm(f);
     tol = 1e-6;
     
-    % iterative solution
+    % iterative refinement on FCI solution
     u   = zeros(size(f));
     nmv = 0;
     for i = 1:60
-        [v,nm] = fcipre(f,MAT,FCI);
+        [v,nm] = fcisol(f,MAT,FCI);
         nmv = nmv + nm;
-        u = u + v; 
+        u = u + v;
         f = f - helmop(v,MAT);
         
         rres = norm(f)/nrm0;
