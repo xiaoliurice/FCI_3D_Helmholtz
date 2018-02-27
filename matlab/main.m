@@ -1,20 +1,21 @@
 %% main script for the matrix-free preconditioner of the Helmholtz equation
 
-% parametrization of the contour
-np   = 6;     % num of poles
+%% parametrization of the contour
+np   = 4;       % num of poles
 rad1 = 0.2;     % radius in x
-rad2 = 2;     % radius in y
+rad2 = 2;       % radius in y
 theta = pi/np.*(1:2:np*2-1);  % angles in radi
 
-FCI = struct('np',np,'shf',[],'wts',[],'nim',8,'im',20,'tol',1e-4);
-FCI.shf = complex( rad1*cos(theta), rad2*sin(theta) );             % points on the ellipse
-FCI.wts = complex( rad2*cos(theta), rad1*sin(theta) )./FCI.shf/np; % weights
-FCI.shf = FCI.shf - max(real(FCI.shf));                            % shift the center
+FCI = struct('np',np,'shf',[],'wts',[],'nim',8,'im',20,'tol',3e-4);
+FCI.shf = complex( rad1*cos(theta), rad2*sin(theta) );                   % points on the ellipse
+FCI.shf = FCI.shf - (max(real(FCI.shf)) + 0.2j*min(abs(imag(FCI.shf))) ); % shift the center
+FCI.wts = complex( rad2*cos(theta), rad1*sin(theta) )./FCI.shf/np;       % weights
 clear np rad1 rad2 theta
 
-for rnd = [1,2,3,4]
+%% solve problems of different sizes
+for sz = [40,160,120,160]
     MAT = struct('N',[],'kh0',[],'kh',[],'ab',[],'z',1); 
-    N = ones(1,3)*rnd*40; % grid size
+    N = ones(1,3)*sz; % grid size
     MAT.N   = N;
     
     % absorbing layers
