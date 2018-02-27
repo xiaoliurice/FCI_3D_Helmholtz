@@ -28,7 +28,7 @@ fprintf('|%.2f',c);
 MAT.zs = 1 + FCI.shf(1);
 [v,~,~,iter] = gmres(@(x)helmop(x,MAT),v,FCI.im,FCI.tol,FCI.nim,@(x)helmpre(x,MAT));
 u = u + v;
-nmv = nmv + (iter(1)-1)*FCI.im + iter(2) + 1;
+nmv = nmv + 2*((iter(1)-1)*FCI.im + iter(2)) + 1;
 
 t=toc(pfci); fprintf('|%.2fs\n',t);
 end

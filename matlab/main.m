@@ -13,7 +13,7 @@ FCI.wts = complex( rad2*cos(theta), rad1*sin(theta) )./FCI.shf/np;        % weig
 clear np rad1 rad2 theta
 
 %% solve problems of different sizes
-for sz = [40,160,120,160]
+for sz = [40,80,120,160]
     FCI.nim = FCI.nim * 2;
     MAT = struct('N',[],'kh0',[],'kh',[],'ab',[],'zf',1,'zs',1); 
     N = ones(1,3)*sz; % grid size
