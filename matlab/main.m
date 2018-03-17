@@ -1,6 +1,6 @@
 %% main script for the matrix-free preconditioner of the Helmholtz equation
 sz = [40,80,160];
-run = 2
+run = 1
 
 z0 = 1;
 N = ones(1,3)*sz(run);
@@ -16,7 +16,7 @@ MAT.S = kron(ones(1,N(2)*N(3)),(pi/(N(1)+1) * (1:N(1))).^2) ...
 
 % squared wavenumber
 khmax = 2*pi/2.22;
-khmin = 2*pi/2.22;
+khmin = 2*pi/2.6;
 MAT.M  = ones(N)*khmax^2;
 MAT.M(ceil(N(1)/2):ceil(N(1)*2/3),ceil(N(2)/2):ceil(N(2)*2/3),ceil(N(3)/2):ceil(N(3)*2/3)) = khmin^2;
 
@@ -36,11 +36,11 @@ MAT
 dmax = max(MAT.D(:))
 
 %% set up the solver
-np   = 4;      % num of poles
+np  = 2;       % num of poles
 rad = 0.2;     % radius for real part
 sep = 0.2;     % distance for imaginary part
 
-FCI = struct('np',np,'shf',[],'wts',[],'nim',4,'im',20,'tol',1e-2, 'dt',[],'num',[]);
+FCI = struct('np',np,'shf',[],'wts',[],'nim',8,'im',20,'tol',[0.3,0.01], 'dt',[],'num',[]);
 if(np==1)
     % shifted Laplacian
     FCI.shf = sep*1j;
@@ -60,16 +60,18 @@ FCI.dt  = zeros(size(FCI.wts));
 rates   = zeros(size(FCI.wts));
 for p = 1:np
     z = z0+FCI.shf(p);
-    if( p*2 > np)
+    if( imag(z) < 0 )
         z = z + 1j*dmax;
     end
-    [FCI.dt(p), rates(p)] = convrate_exp(MAT.S(end)/khmin^2, z, 3);
-    FCI.num(p) = ceil(log(FCI.tol*abs(FCI.wts(1)/FCI.wts(p)))/log(rates(p)));
+    [FCI.dt(p), rates(p)] = convrate_exp(MAT.S(end)/khmin^2, z, 4);
+    FCI.num(p) = ceil(log(FCI.tol(1)*abs(FCI.wts(1)/FCI.wts(p)))/log(rates(p)));
 end
+FCI.num = max(FCI.num, 1);
 FCI
 rates
 
-%% right hand side
+%% iterative solution
+%right hand side
 f = zeros(N);
 f(ceil(N(1)/2),ceil(N(2)/2),ceil(N(3)/2)) = 1;
 f = reshape(f,[prod(N),1]);
@@ -93,6 +95,13 @@ for i = 1:60
     end
 end
 t = toc(otimer);
-u = reshape(u,N);
 fprintf('time: %.2f, nmatvec %d\n\n\n', t, nmv);
-%imagesc(real(u(:,:,ceil(N(3)/2))));
+u = reshape(u,N);
+
+%% band-limited interpolation and visualization
+m = 3;             % refinement
+tmp = zeros(N*m);
+tmp(1:N(1),1:N(2),1:N(3)) = dst1fft(u);
+tmp = dst1fft(tmp);
+%%
+fig = visualize(real(tmp), [ceil(N(1)*m*0.3), ceil(N(2)*m*0.7), ceil(N(3)*m*0.2)], m);

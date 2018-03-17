@@ -18,9 +18,9 @@ for p = 1:FCI.np
 
    
    % matrix-free solution of shifted problems
-   [v,nmv1] = cmplxsplit_exp(f,MAT,ss,FCI.num(p),FCI.dt(p),3);
+   [v,nmv1] = cmplxsplit_exp(f,MAT,ss,FCI.num(p),FCI.dt(p),4);
    nmv = nmv + nmv1;
-   fprintf('|%.2e',norm(f-helmop(v,z,MAT))/nrm0*abs(FCI.wts(p)));
+   fprintf('|%.2e',norm(f-helmop(v,z,MAT))/nrm0*abs(FCI.wts(p)/FCI.wts(1)));
    
    u = u + FCI.wts(p)*v;
 end
@@ -32,9 +32,9 @@ fprintf('|step %.2e,%.2e',real(c),imag(c));
 
 % inner problem
 % GMRES on current residual
-[v,~,~,iter] = gmres(@(x)helmop(x,z0,MAT),v,FCI.im,FCI.tol,FCI.nim);
+[v,~,~,iter] = gmres(@(x)helmop(x,z0,MAT),v,FCI.im,FCI.tol(2),FCI.nim);
 u = u + v;
-nmv = nmv + 2*((iter(1)-1)*FCI.im + iter(2)) + 1;
+nmv = nmv + (iter(1)-1)*FCI.im + iter(2) + 1;
 
 t=toc(pfci); fprintf('|time %.2fs\n',t);
 end
