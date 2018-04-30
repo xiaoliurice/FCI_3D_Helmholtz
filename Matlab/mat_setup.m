@@ -6,8 +6,8 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
     % sparse = 1 for 7-point stencil  (sampling rate > 8);
     %        = 0 for Fourier spectral (sampling rate > 2).
     
-    % 'S' stiffness, 'M' mass, 'D' boundary, 'rho' rho(inv(M)S), and some tmp storage
-    MAT = struct('N',N, 'S',[], 'M',[], 'D',[], 'sparse',sparse, 'rho', 0, 'atmp',[], 'btmp',[]);
+    % 'S' stiffness, 'M' mass, 'D' boundary, 'rho' rho(inv(M)S)
+    MAT = struct('N',N, 'S',[], 'M',[], 'D',[], 'sparse',sparse, 'rho', 0);
     
     % mass matrix: squared wavenumber
     MAT.M  = ones(N)*khmax^2;
@@ -22,11 +22,11 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
     MAT.M = smooth3(MAT.M,'gaussian',9,1);
     
     % non-hermitian part from absorbing layers, set cab=0 to remove it
-    nab = max(8, ceil(min(N)/10));    % number of points
+    nab = 8;     % number of points
     if(sparse)
-        nab = nab*3;
+        nab = 20;
     end
-    rab = 1e-3;  % decay of amplitude
+    rab = 1e-2;  % decay of amplitude
     cab = abs(log(rab))/khmax*2;
     l1 = taper(N(1),nab,nab)*cab;
     l2 = taper(N(2),nab,nab)*cab;
@@ -35,6 +35,7 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
     MAT.D(:) = max( kron(ones(N(2)*N(3),1), l1), kron(l3, ones(N(2)*N(1),1)) );
     MAT.D(:) = max( MAT.D(:), kron( ones(N(3),1), kron(l2, ones(N(1),1)) ) );
     
+    % stiffness matrix
     if(sparse)
         e1 = ones(N(1),1);
         e2 = ones(N(2),1);

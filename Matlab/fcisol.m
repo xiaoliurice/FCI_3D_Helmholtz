@@ -8,15 +8,11 @@ u = zeros(size(f));
 nmv = 0;
 nrm0 = norm(f);
 for p = 1:FCI.np
-   % apply the shift
    z  = 1 + FCI.shf(p);
-   ss = sign(imag(z));
-   tmp = sqrt(z + 1j*MAT.D(:));
-   MAT.atmp = real(tmp).^2;
-   MAT.btmp = (ss*imag(tmp)) ./ real(tmp);
-
+   
    % polynomial fixed point iteration of shifted problems
-   [v,nmv1] = exp_poly(f,MAT,ss,FCI.num(p),FCI.dt(p),FCI.q);
+   %[v,nmv1] = exp_poly(f,MAT,z,FCI.num(p),FCI.dt(p),FCI.q);
+   [v,nmv1] = cheby_poly(f,MAT,z,FCI.tol(2),FCI.num(p)*FCI.q);
    nmv = nmv + nmv1;
    fprintf('|%.2e',norm(f-helmop(v,z,MAT))/nrm0*abs(FCI.wts(p)/FCI.wts(1)));
    
