@@ -1,17 +1,18 @@
-function [FCI] = fci_setup(np,sep,asp,MAT)
+function [FCI] = fci_setup(np,sep,asp,nblock,MAT)
 % set up the solver
 % np   = num of poles
 % sep  = min separation from the real axis
 % asp  = aspact ratio of the contour
-
+% nblock = 1 original, 2, extended
 
 % 'shf' shifts, 'wts' weights
 % 'nim' [num of restarts, Krylov subspace dimension]
 % 'tol' [tol of outer problems, tol of inner problem]
 % 'dt' step size, 'num' num of fixed pnt iters, 'q' order
-FCI = struct('np',np,'shf',[],'wts',[],'nim',[1,20],'tol',[2e-1,2e-1],'dt',[],'num',[],'q',4);
+FCI = struct('np',np,'shf',[],'wts',[],'nim',[1,20],'tol',[2e-1,2e-1],...
+             'nblock',nblock,'z0',[],'d',[],'num',[],'q',4);
 
-dmax = max(MAT.D(:))
+dmax = MAT.rho(2);
 
 % quadrature points and weights
 if(np==1)
@@ -32,15 +33,15 @@ end
 
 % set up fixed point iterations
 FCI.num = zeros(size(FCI.wts));
-FCI.dt  = zeros(size(FCI.wts));
+FCI.d   = zeros(size(FCI.wts));
 rates   = zeros(size(FCI.wts));
 for p = 1:np
-    z = 1+FCI.shf(p);
+    z = FCI.shf(p);
     if( imag(z) < 0 )
         % distance in y from the nearest eigenvalue
         z = z + 1j*dmax;
     end
-    [FCI.dt(p), rates(p)] = exp_rate(MAT.rho, z,FCI.q);
+    [FCI.z0(p), FCI.d(p), rates(p)] = exp_rate(z,MAT.rho,FCI.q,nblock);
     FCI.num(p) = ceil( log(FCI.tol(1) * abs(FCI.wts(1)/FCI.wts(p)).^0.5 )/log(rates(p)));
 end
 FCI.num = max(FCI.num, 1);

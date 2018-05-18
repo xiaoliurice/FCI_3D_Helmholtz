@@ -6,8 +6,10 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
     % sparse = 1 for 7-point stencil  (sampling rate > 8);
     %        = 0 for Fourier spectral (sampling rate > 2).
     
-    % 'S' stiffness, 'M' mass, 'D' boundary, 'rho' rho(inv(M)S)
-    MAT = struct('N',N, 'S',[], 'M',[], 'D',[], 'sparse',sparse, 'rho', 0);
+    % S - 1jDM - M
+    % 'S' stiffness, 'M' mass, 'D' boundary,
+    % 'rho' spectral radius of S D
+    MAT = struct('N',N, 'S',[], 'M',[], 'D',[], 'sparse',sparse, 'rho', [],'khmax',khmax);
     
     % mass matrix: squared wavenumber
     MAT.M  = ones(N)*khmax^2;
@@ -47,7 +49,7 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
         Id2 = spdiags(e2, 0, N(2), N(2));
         Id3 = spdiags(e3, 0, N(3), N(3));
         MAT.S  = kron(kron(T3,Id2),Id1) + kron(kron(Id3,T2),Id1) + kron(kron(Id3,Id2),T1);
-        MAT.rho =  12 / khmin^2;
+        MAT.rho =  [12/khmax^2, max(MAT.D(:))];
     else
         % eigenvalues of Laplaician in DFT basis
         l1 = min(0:N(1)-1,N(1):-1:1) * (2*pi/N(1));
@@ -56,7 +58,7 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
         MAT.S = kron(ones(1,N(2)*N(3)),l1.^2) ...
             +kron( l3.^2, ones(1,N(1)*N(2)) )...
             +kron(ones(1,N(3)), kron( l2.^2, ones(1,N(1))));
-        MAT.rho = max(MAT.S(:)) / khmin^2;
+        MAT.rho = [max(MAT.S(:))/khmax^2, max(MAT.D(:))];
     end
 end
 
