@@ -1,4 +1,4 @@
-function [sol, nmv, relres] = exp_poly(rhs,z,MAT,nblock, tol,niter, z0,d,q)
+function [sol, nmv, relres] = exp_poly(rhs,z,MAT, tol,niter, z0,d,q)
 % solution of shifted Helmholtz via p-th order taylor expansion of exp func
 
 wd  = -1j*d;
@@ -9,15 +9,8 @@ for j=1:q
 end
 wsum = sum(wv);
 
-n = length(rhs);
+sol = zeros(size(rhs));
 nrm0 = norm(rhs);
-if(nblock == 1)
-    sol = zeros(size(rhs));
-else
-    rhs = [zeros(size(rhs));rhs];
-    sol = zeros(size(rhs));
-end
-
 nmv = 0;
 for i = 1:niter
     k = sol;
@@ -37,9 +30,4 @@ for i = 1:niter
     end
     sol  =  sol/wsum;
 end
-
-if(nblock == 2)
-    sol = sol(n+1:end);
-end
-
 end

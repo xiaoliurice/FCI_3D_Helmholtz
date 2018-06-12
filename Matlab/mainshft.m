@@ -7,51 +7,63 @@ if(sparse)
     refine = 4; % refine by 4 times
 end
 
-sz = 40;
+sz = 80;
 ppw = 2.25*refine;         %sampling rate
 N   = ones(1,3)*sz*refine; %grid size
 
-MAT = mat_setup(N,pi/ppw,pi*2/ppw,sparse) % form the matrix
-MAT.rho = MAT.rho*1.2;
+MAT = mat_setup(N,pi*2/ppw,pi*2/ppw,sparse) % form the matrix
 % the following line removes absorbing boundaries
 %MAT.D = MAT.D*0; MAT.rho(2) = 0;
 
 % right hand side
-f = rand([prod(N),1]);
-%f = zeros([prod(N),1]);
-%f( ceil(N(1)/2) + N(1)*( floor(N(2)/2) + N(2)*floor(N(3)/2) ) ) = 1;
+%f = rand([prod(N),1]);
+f = zeros([prod(N),1]);
+f( ceil(N(1)/2) + N(1)*( floor(N(2)/2) + N(2)*floor(N(3)/2) ) ) = 1;
 nrm0 = norm(f);
-tol = 1e-2;
+tol = 0.2;
 
 
 %% select step size and perform a trial run
 % compute the square root for splitting
 
+dmax = MAT.rho(2);
 % upper part
 vz = 1j*[1,0.5,0.25,0.125]*refine;
 % lower part
-%vz = - 1j*([1,0.5,0.25,0.125]*refine + MAT.rho(2));
+%vz = - 1j*([1,0.5,0.25,0.125]*refine + dmax);
 
 for nblock = 1:2
+    if(nblock == 1)
+        bet = [MAT.rho(1)/2-1, MAT.rho(1)/2, dmax];
+    else
+        bet = [-1, dmax/2 + sqrt(dmax^2/4 + MAT.rho(1)), dmax];
+        f = [zeros(size(f));f];
+    end
+    
     fprintf('\nnblock=%d\n',nblock);
     for z = vz
         % richardson
-        [d, rate] = ric_rate(z,MAT.rho,nblock);
+        [d, rate] = ric_rate(z,bet);
         num = ceil( log(tol)/log(rate) );
-        disp('--richardson: rate, nmatvec, relres, nmatvec')
+        disp('--Richardson: rate, nmatvec, relres, nmatvec')
         fprintf('%.4f, %d\n',rate,num);
-        [u, nmv, relres] = ric_poly(f,z,MAT,nblock, tol,num*2, d);
+        [u, nmv, relres] = ric_poly(f,z,MAT, tol,num*2, d);
+        fprintf('  relres %.2e, matvecs %d\n', relres, nmv);
+        
+        % Chebyshev of symmetric
+        [u, nmv, relres] = cheby_poly(f,z,MAT, tol,num*2);
+        disp('--Chebyshev: relres, nmatvec')
         fprintf('  relres %.2e, matvecs %d\n', relres, nmv);
         
         % Taylor expansion of matrix exponential
         disp('--order, step size, rate per matvec, rate, nmatvec')
-        for q = 1:6
-            [z0, d, rate] = exp_rate(z,MAT.rho,q,nblock);
-            num = ceil( log(tol)/log(rate) );    
+        for q = 4
+            [q1, d, rate] = exp_rate(z, bet, q,q);
+            num = ceil( log(tol)/log(rate) );
             fprintf('%d, %.3f, %.4f, %.4f, %d\n',...
                     q, d, rate.^(1/q), rate, num*q);
             % true runs
-            [u, nmv, relres] = exp_poly(f,z,MAT,nblock, tol,num*2, z0,d,q);
+            [u, nmv, relres] = exp_poly(f,z,MAT, tol,num*2,complex(bet(1),imag(z)),d,q1);
             fprintf('  relres %.2e, matvecs %d\n', relres, nmv);
         end
         

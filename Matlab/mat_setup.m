@@ -6,25 +6,25 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
     % sparse = 1 for 7-point stencil  (sampling rate > 8);
     %        = 0 for Fourier spectral (sampling rate > 2).
     
-    % S - 1jDM - M
+    % S - 1jD - M
     % 'S' stiffness, 'M' mass, 'D' boundary,
-    % 'rho' spectral radius of S D
-    MAT = struct('N',N, 'S',[], 'M',[], 'D',[], 'sparse',sparse, 'rho', [],'khmax',khmax);
+    % 'rho' spectral radius of Hermitian and skew-Hermitian parts
+    MAT = struct('N',N, 'S',[], 'M',[], 'D',[], 'sparse',sparse, 'rho', []);
     
-    % mass matrix: squared wavenumber
-    MAT.M  = ones(N)*khmax^2;
-    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.2):ceil(N(3)*0.4)) = khmin^2;
-    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.6):ceil(N(3)*0.8)) = khmin^2;
-    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.2):ceil(N(3)*0.4)) = khmin^2;
-    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.6):ceil(N(3)*0.8)) = khmin^2;
-    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.2):ceil(N(3)*0.4)) = khmin^2;
-    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.6):ceil(N(3)*0.8)) = khmin^2;
-    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.2):ceil(N(3)*0.4)) = khmin^2;
-    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.6):ceil(N(3)*0.8)) = khmin^2;
+    % mass matrix
+    MAT.M  = ones(N);
+    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.2):ceil(N(3)*0.4)) = (khmin/khmax)^2;
+    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.6):ceil(N(3)*0.8)) = (khmin/khmax)^2;
+    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.2):ceil(N(3)*0.4)) = (khmin/khmax)^2;
+    MAT.M(ceil(N(1)*0.2):ceil(N(1)*0.4),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.6):ceil(N(3)*0.8)) = (khmin/khmax)^2;
+    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.2):ceil(N(3)*0.4)) = (khmin/khmax)^2;
+    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.2):ceil(N(2)*0.4),ceil(N(3)*0.6):ceil(N(3)*0.8)) = (khmin/khmax)^2;
+    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.2):ceil(N(3)*0.4)) = (khmin/khmax)^2;
+    MAT.M(ceil(N(1)*0.6):ceil(N(1)*0.8),ceil(N(2)*0.6):ceil(N(2)*0.8),ceil(N(3)*0.6):ceil(N(3)*0.8)) = (khmin/khmax)^2;
     MAT.M = smooth3(MAT.M,'gaussian',9,1);
     
     % non-hermitian part from absorbing layers, set cab=0 to remove it
-    nab = 8;     % number of points
+    nab = 10;     % number of points
     if(sparse)
         nab = 20;
     end
@@ -48,18 +48,19 @@ function [MAT] = mat_setup(N,khmin,khmax,sparse)
         Id1 = spdiags(e1, 0, N(1), N(1));
         Id2 = spdiags(e2, 0, N(2), N(2));
         Id3 = spdiags(e3, 0, N(3), N(3));
-        MAT.S  = kron(kron(T3,Id2),Id1) + kron(kron(Id3,T2),Id1) + kron(kron(Id3,Id2),T1);
-        MAT.rho =  [12/khmax^2, max(MAT.D(:))];
+        MAT.S  = (kron(kron(T3,Id2),Id1) + kron(kron(Id3,T2),Id1) + kron(kron(Id3,Id2),T1)) / khmax^2;
+        MAT.rho =  [12/khmax^2 + 1-(khmin/khmax)^2, max(MAT.D(:))];
     else
         % eigenvalues of Laplaician in DFT basis
-        l1 = min(0:N(1)-1,N(1):-1:1) * (2*pi/N(1));
-        l2 = min(0:N(2)-1,N(2):-1:1) * (2*pi/N(2));
-        l3 = min(0:N(3)-1,N(3):-1:1) * (2*pi/N(3));
+        l1 = min(0:N(1)-1,N(1):-1:1) * (2*pi/N(1) /khmax);
+        l2 = min(0:N(2)-1,N(2):-1:1) * (2*pi/N(2) /khmax);
+        l3 = min(0:N(3)-1,N(3):-1:1) * (2*pi/N(3) /khmax);
         MAT.S = kron(ones(1,N(2)*N(3)),l1.^2) ...
             +kron( l3.^2, ones(1,N(1)*N(2)) )...
             +kron(ones(1,N(3)), kron( l2.^2, ones(1,N(1))));
-        MAT.rho = [max(MAT.S(:))/khmax^2, max(MAT.D(:))];
+        MAT.rho = [max(MAT.S(:)) + 1-(khmin/khmax)^2, max(MAT.D(:))];
     end
+    
 end
 
 function v = taper(N, l1, l2)

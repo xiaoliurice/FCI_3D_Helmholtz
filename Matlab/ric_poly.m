@@ -1,17 +1,9 @@
-function [sol, nmv, relres] = ric_poly(rhs,z,MAT,nblock, tol,niter, d)
+function [sol, nmv, relres] = ric_poly(rhs,z,MAT, tol,niter,d)
 % richardson iteration
 % sol = sol + d*res
 
-n = length(rhs);
-
-if(nblock == 1)
-    sol = zeros(size(rhs));
-else
-    rhs = [zeros(size(rhs));rhs];
-    sol = zeros(2*n, 1);
-end
-
 res  = rhs;
+sol  = zeros(size(rhs));
 nrm0 = norm(rhs);
 for it = 1:niter
     sol = sol + d*res;
@@ -22,9 +14,5 @@ for it = 1:niter
     end
 end
 
-
-if(nblock == 2)
-    sol = sol(n+1:end);
-end
 nmv = it;
 end

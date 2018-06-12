@@ -1,16 +1,17 @@
-function [FCI] = fci_setup(np,sep,asp,nblock,MAT)
+function [FCI] = fci_setup(np,sep,asp,nblock,method,MAT)
 % set up the solver
 % np   = num of poles
 % sep  = min separation from the real axis
 % asp  = aspact ratio of the contour
-% nblock = 1 original, 2, extended
+% nblock = 1 original; 2 extended
+% method = 1 exp(); 2 Chebyshev+GMRES
 
 % 'shf' shifts, 'wts' weights
-% 'nim' [num of restarts, Krylov subspace dimension]
+% 'im'  Krylov subspace dimension
 % 'tol' [tol of outer problems, tol of inner problem]
 % 'dt' step size, 'num' num of fixed pnt iters, 'q' order
-FCI = struct('np',np,'shf',[],'wts',[],'nim',[1,20],'tol',[2e-1,2e-1],...
-             'nblock',nblock,'z0',[],'d',[],'num',[],'q',4);
+FCI = struct('np',np,'shf',[],'wts',[],'im',20,'tol',[2e-1,2e-1],...
+             'nblock',nblock,'method',method, 'bet',[],'num',[],'q',[]);
 
 dmax = MAT.rho(2);
 
@@ -31,21 +32,22 @@ else
     fprintf('radius: %f, %f, center: %f,%f\n',rx,ry,-dx,-dy);
 end
 
+if(nblock == 1)
+    FCI.bet = [MAT.rho(1)/2-1, MAT.rho(1)/2, dmax];
+else
+    FCI.bet = [-1, dmax/2 + sqrt(dmax^2/4 + MAT.rho(1)), dmax];
+end
+
 % set up fixed point iterations
 FCI.num = zeros(size(FCI.wts));
+FCI.q   = zeros(size(FCI.wts));
 FCI.d   = zeros(size(FCI.wts));
 rates   = zeros(size(FCI.wts));
 for p = 1:np
-    z = FCI.shf(p);
-    if( imag(z) < 0 )
-        % distance in y from the nearest eigenvalue
-        z = z + 1j*dmax;
-    end
-    [FCI.z0(p), FCI.d(p), rates(p)] = exp_rate(z,MAT.rho,FCI.q,nblock);
+    [FCI.q(p), FCI.d(p), rates(p)] = exp_rate(FCI.shf(p), FCI.bet, 1, 7);
     FCI.num(p) = ceil( log(FCI.tol(1) * abs(FCI.wts(1)/FCI.wts(p)).^0.5 )/log(rates(p)));
 end
 FCI.num = max(FCI.num, 1);
-FCI.nim(1) = ceil(sum(FCI.num)*FCI.q/FCI.nim(2) );
 
 rates
 end
